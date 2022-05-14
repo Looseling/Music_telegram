@@ -3,7 +3,7 @@ from telegram.ext import Updater, CallbackContext, CommandHandler, MessageHandle
 import spotify
 import os
 import glob
-
+from pytube import YouTube
 from pathlib import Path
 
 WELCOME = '''Hi
@@ -29,27 +29,17 @@ Name album - Name artist
 sort = {}
 telegram_token = '5130499370:AAEymk_-luU_awA5EhfQvkDue7CluiiLVrU'
 
-def text_finder(txt):
-    a = txt.find("https://open.spotify.com")
-    print(txt)
-    print(a)
-    txt = txt[a:]
-    return txt
 
 def downloader(update, context, link, type):
-    if type == 'AL':
-        ITEMS = spotify.album(link)
-    else:
-        ITEMS = []
-    print(ITEMS)
+    ITEMS = spotify.album(link)
     MESSAGE = ""
-    COUNT = 0
-    for song in ITEMS:
-        # if type == 'PL':
-        #     song = song['track']
-        COUNT += 1
-        MESSAGE += f"{COUNT}. {song['name']}\n"
-    context.bot.send_message(chat_id=update.effective_chat.id, text=MESSAGE)
+    # COUNT = 0
+    # for song in ITEMS:
+    #     # if type == 'PL':
+    #     #     song = song['track']
+    #     COUNT += 1
+    #     MESSAGE += f"{COUNT}. {song['name']}\n"
+    # context.bot.send_message(chat_id=update.effective_chat.id, text=MESSAGE)
     TRACKS = []
     for song in ITEMS:
         # if type == 'PL':
@@ -65,21 +55,18 @@ def send_album(update,context,TRACKS):
     for track in TRACKS:
         if counter == 10:
             context.bot.send_media_group(chat_id=update.effective_chat.id, media=audios)
-            audios.clear()
+            counter = 0
         try:
             audios.append(InputMediaAudio(open(f'./album/{track}.mp3','rb')))
         except:
             pass
         counter = counter + 1
 
-    #
-    # files = glob.glob('./album/')
-    # for f in files:
-    #     os.remove(f)
-
-
-
-
+    dir = os.getcwd() + '/album'
+    filelist = glob.glob(os.path.join(dir, "*"))
+    for f in filelist:
+        os.remove(f)
+   
 
 def download_album(update,context, link):
     song = spotify.Song(link=link)
@@ -92,7 +79,6 @@ def download_album(update,context, link):
 
 def download_song(update, context, link):
     song = spotify.Song(link=link)
-    song.YTLink()
     try:
         song.YTDownload(type='S')
         caption = f'Track: {song.trackName}\nAlbum: {song.album}\nArtist: {song.artist}'
@@ -101,11 +87,30 @@ def download_song(update, context, link):
         # delete song after downloading from disk
         os.remove(f'./singles/{song.trackName}.mp3')
     except:
-
         context.bot.send_sticker(chat_id=update.effective_chat.id,
                                  sticker='CAACAgQAAxkBAAIFSWBF_m3GHUtZJxQzobvD_iWxYVClAAJuAgACh4hSOhXuVi2-7-xQHgQ')
         context.bot.send_message(chat_id=update.effective_chat.id, text=f'404\n"{song.trackName}" Not Found')
 
+
+def download_link(update,context,link):
+    yt = YouTube(link)
+    mp3_file = yt.streams.filter(only_audio=True).first()
+    out_file = mp3_file.download('./singles')
+    destination = './singles/'
+
+    new_file = os.getcwd() + destination + yt.title + '.mp3'
+    os.rename(out_file, new_file)
+
+    try:
+        caption = f'Track: {yt.title}'
+        context.bot.send_audio(chat_id=update.effective_chat.id, audio=open(f'./singles/{yt.title}.mp3', 'rb'),
+                               caption=caption, title=yt.title)
+        # delete song after downloading from disk
+        os.remove(f'./singles/{yt.title}.mp3')
+    except:
+        context.bot.send_sticker(chat_id=update.effective_chat.id,
+                                 sticker='CAACAgQAAxkBAAIFSWBF_m3GHUtZJxQzobvD_iWxYVClAAJuAgACh4hSOhXuVi2-7-xQHgQ')
+        context.bot.send_message(chat_id=update.effective_chat.id, text=f'404\n Not Found')
 
 
 
@@ -115,30 +120,26 @@ def start(update: Update, context: CallbackContext):
     context.bot.send_sticker(chat_id=update.effective_chat.id,
                              sticker='CAACAgIAAxkBAAEESR9iQEBGU3XhqeNxElehxQk3-y57pAACMAADV-_qHro_3HxAn3cTIwQ')
     context.bot.send_message(chat_id=update.effective_chat.id, text=WELCOME)
-
 def single(update: Update, context: CallbackContext):
-    context.bot.send_sticker(chat_id=update.effective_chat.id,
-                             sticker='CAACAgIAAxkBAAEESRtiQD8GEjXrD6qQE-qYl47vCLZV9AACIwADV-_qHsBFO7KbfFG7IwQ')
-    context.bot.send_message(chat_id=update.effective_chat.id, text=SINGLE_MESSAGE)
     sort[update.effective_chat.id] = 'single'
-
 def album(update: Update, context: CallbackContext):
-    # download_album(update, context)
     sort[update.effective_chat.id] = 'album'
-
+def link(update: Update, context: CallbackContext):
+    sort[update.effective_chat.id] = 'link'
 
 
 
 def download(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     msg = update.message.text
-    msglink = text_finder(msg)
 
     if chat_id in sort:
         if sort[chat_id] == 'single':
             download_song(update, context, spotify.searchsingle(msg))
         elif sort[chat_id] == 'album':
             downloader(update, context, spotify.searchalbum(msg), 'AL')
+        elif sort[chat_id] == 'link':
+            download_link(update, context, msg)
         del sort[chat_id]
     else:
         context.bot.send_sticker(chat_id=update.effective_chat.id,
@@ -153,16 +154,16 @@ def run():
 
     start_handler = CommandHandler('start', start)
     single_handler = CommandHandler('single', single)
+    link_handler = CommandHandler('link', link)
     album_handler = CommandHandler('album', album)
+    download_handler = MessageHandler(Filters.text & (~Filters.command), download)
 
 
-    download1_handler = MessageHandler(Filters.text & (~Filters.command), download)
-
-
+    dispatcher.add_handler(link_handler)
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(single_handler)
     dispatcher.add_handler(album_handler)
-    dispatcher.add_handler(download1_handler)
+    dispatcher.add_handler(download_handler)
 
 
     print('[TELEGRAM BOT] Listening...')

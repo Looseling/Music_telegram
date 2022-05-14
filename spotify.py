@@ -7,7 +7,7 @@ import os
 from pprint import pprint
 spotify = spotipy.Spotify(
     client_credentials_manager=SpotifyClientCredentials(client_id='e4b5c7656c104beb959fcf0c929342bc',
-                                                        client_secret='73e89ad515104bc68ea6bb9dc7b57fc1'))
+                                                        client_secret='efe86dd9be344bf5b3a90a19c9cf2c03'))
 
 class Song:
     def __init__(self, link):
@@ -90,25 +90,21 @@ class Song:
     def YTDownload(self, type):
         yt = YouTube(self.YTLink())
         mp3_file = yt.streams.filter(only_audio=True).first()
-        default_filename = mp3_file.default_filename
-        if type == 'S':
-            out_file = mp3_file.download('./singles')
-            destination = './singles/'
-            # new_file = os.getcwd() + './singles/' + default_filename + '.mp3'
-
-
-        elif type == 'AL':
+        if type == 'AL':
             out_file = mp3_file.download('./album')
             destination = './album/'
-            # new_file = os.getcwd() + './album/' + self.trackName + '.mp3'
+        elif type == 'S':
+            out_file = mp3_file.download('./singles')
+            destination = './singles/'
 
         try:
             new_file = os.getcwd() + destination + self.trackName + '.mp3'
             os.rename(out_file, new_file)
         except:
-            self.trackName = default_filename[0:len(default_filename)-4]
+            self.trackName = mp3_file.default_filename[0:len(mp3_file.default_filename)-4]
             new_file = os.getcwd() + destination + self.trackName + '.mp3'
             os.rename(out_file, new_file)
+
 
 
 def album(link):
@@ -126,11 +122,6 @@ def searchalbum(album_name):
     results = spotify.search(album_name)
     pprint(results)
     return results['tracks']['items'][0]['album']['external_urls']['spotify']
-
-
-def playlist(link):
-    results = spotify.playlist_tracks(link)
-    return results['items'][:50]
 
 
 def searchsingle(track):
