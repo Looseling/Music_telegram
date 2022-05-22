@@ -1,0 +1,6 @@
+python_telegram_bot==20.0a0
+pytube==12.1.0
+pytube3==9.6.4
+spotipy==2.16.1
+telegram==0.0.1
+youtube_search==2.1.0

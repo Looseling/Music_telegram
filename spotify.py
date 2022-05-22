@@ -4,10 +4,11 @@ from spotipy.oauth2 import SpotifyClientCredentials
 from youtube_search import YoutubeSearch
 from pytube import YouTube
 import os
-from pprint import pprint
+from config import *
+
 spotify = spotipy.Spotify(
-    client_credentials_manager=SpotifyClientCredentials(client_id='e4b5c7656c104beb959fcf0c929342bc',
-                                                        client_secret='efe86dd9be344bf5b3a90a19c9cf2c03'))
+    client_credentials_manager=SpotifyClientCredentials(client_id=Spotify_client_id,
+                                                        client_secret=Spotify_client_secret))
 
 class Song:
     def __init__(self, link):
@@ -89,6 +90,7 @@ class Song:
 
     def YTDownload(self, type):
         yt = YouTube(self.YTLink())
+
         mp3_file = yt.streams.filter(only_audio=True).first()
         if type == 'AL':
             out_file = mp3_file.download('./album')
@@ -116,11 +118,8 @@ def album(link):
     return albums
 
 
-
-
 def searchalbum(album_name):
     results = spotify.search(album_name)
-    pprint(results)
     return results['tracks']['items'][0]['album']['external_urls']['spotify']
 
 
