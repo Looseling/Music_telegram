@@ -1,4 +1,3 @@
 # Music_telegram
-telegram bot to download music from Spotify 
+Download songs from telegram using Spotify API 
 
-Basym Aurip ketti
